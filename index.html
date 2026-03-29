@@ -132,7 +132,7 @@
     .terminal-text {
       min-height: 220px;
       white-space: pre-wrap;
-      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+      font-family: "Courier New", "Lucida Console", monospace;
       font-size: clamp(14px, 2vw, 18px);
       line-height: 1.7;
       color: rgba(236, 242, 255, 0.95);
@@ -302,7 +302,6 @@
   </style>
 </head>
 <body>
-  
   <script>
     const BG_GIF_URL = "assets/background.gif";
     if (BG_GIF_URL.trim()) {
@@ -360,7 +359,7 @@
     const timerLabel = document.getElementById('timerLabel');
 
     const fullText = messages.join('\n\n');
-    const speed = 16;
+    const speed = 6;
     let i = 0;
     let start = Date.now();
 
@@ -374,64 +373,31 @@
     tickTimer();
 
     function typeLoop() {
+      const glitchChars = ['#','@','%','&','/','\\','░','▒','▓'];
+
       if (i < fullText.length) {
-        typedEl.textContent += fullText[i];
-        i++;
-        const ch = fullText[i - 1];
-        const delay = ch === '\n' ? 34 : ch === '.' ? 75 : ch === '/' ? 10 : 16;
-        setTimeout(typeLoop, Math.max(8, speed + delay - 16));
+        const burstSize = Math.floor(Math.random() * 4) + 2;
+
+        let chunk = '';
+        for (let b = 0; b < burstSize && i < fullText.length; b++, i++) {
+          let ch = fullText[i];
+
+          if (Math.random() < 0.04 && ch !== '\n' && ch !== ' ') {
+            chunk += glitchChars[Math.floor(Math.random() * glitchChars.length)];
+          } else {
+            chunk += ch;
+          }
+        }
+
+        typedEl.textContent += chunk;
+
+        const delay = 8 + Math.random() * 22;
+        setTimeout(typeLoop, delay);
         return;
       }
-      setTimeout(beginReveal, 550);
+
+      setTimeout(beginReveal, 350);
     }
-
-    function beginReveal() {
-      flashEl.classList.add('on');
-      caretEl.style.opacity = '0';
-      setTimeout(() => {
-        terminalWrap.classList.add('fade-away');
-        enterStage.classList.add('ready');
-      }, 180);
-      setTimeout(() => {
-        flashEl.classList.remove('on');
-      }, 700);
-      setTimeout(() => {
-        terminalWrap.style.display = 'none';
-      }, 1100);
-      clearInterval(timer);
-    }
-
-    gate.addEventListener('click', () => {
-      gate.style.transform = 'scale(0.95)';
-      gate.style.filter = 'drop-shadow(0 0 24px rgba(255,255,255,0.35)) drop-shadow(0 0 54px rgba(255,255,255,0.12))';
-      flashEl.classList.add('on');
-      setTimeout(() => {
-        window.location.href = 'hub.html';
-      }, 420);
-    });
-
-    const maxOffset = 10;
-    document.addEventListener('mousemove', (e) => {
-      const rect = gate.getBoundingClientRect();
-      const cx = rect.left + rect.width / 2;
-      const cy = rect.top + rect.height / 2;
-      const dx = (e.clientX - cx) / window.innerWidth;
-      const dy = (e.clientY - cy) / window.innerHeight;
-      const tx = Math.max(-maxOffset, Math.min(maxOffset, dx * 34));
-      const ty = Math.max(-maxOffset, Math.min(maxOffset, dy * 34));
-      gate.style.setProperty('--mx', tx + 'px');
-      gate.style.setProperty('--my', ty + 'px');
-      gate.style.transform = `translate(${tx * 0.18}px, ${ty * 0.18}px) scale(1)`;
-    });
-
-    gate.addEventListener('mouseenter', () => {
-      gate.style.transition = 'transform 60ms linear';
-    });
-
-    gate.addEventListener('mouseleave', () => {
-      gate.style.transition = 'transform 300ms ease';
-      gate.style.transform = 'translate(0,0)';
-    });
 
     typeLoop();
   </script>
