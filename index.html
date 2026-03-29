@@ -1,0 +1,439 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ENTER</title>
+  <style>
+    :root {
+      --bg: #050608;
+      --fg: #eef2ff;
+      --muted: rgba(238, 242, 255, 0.65);
+      --accent: #ffffff;
+      --glow: rgba(255, 255, 255, 0.55);
+      --panel: rgba(8, 10, 14, 0.62);
+      --panel-border: rgba(255, 255, 255, 0.14);
+    }
+
+    * { box-sizing: border-box; }
+    html, body {
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      overflow: hidden;
+      background: var(--bg);
+      color: var(--fg);
+      font-family: Arial, Helvetica, sans-serif;
+    }
+
+    body {
+      position: relative;
+      isolation: isolate;
+      cursor: default;
+    }
+
+    .bg {
+      position: fixed;
+      inset: 0;
+      background-color: #090a0f;
+      background-image: var(--bg-gif);
+      background-size: cover;
+      background-position: center;
+      background-repeat: no-repeat;
+      filter: saturate(1.05) contrast(1.05) brightness(0.78);
+      transform: scale(1.06);
+      animation: drift 18s ease-in-out infinite alternate;
+      z-index: -3;
+    }
+
+    .bg::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background:
+        radial-gradient(circle at center, rgba(255,255,255,0.08), transparent 28%),
+        radial-gradient(circle at center, transparent 0 38%, rgba(0,0,0,0.55) 72%, rgba(0,0,0,0.82) 100%),
+        linear-gradient(to bottom, rgba(255,255,255,0.04), rgba(0,0,0,0.18));
+      mix-blend-mode: screen;
+    }
+
+    .grain {
+      position: fixed;
+      inset: -20%;
+      pointer-events: none;
+      z-index: -2;
+      opacity: 0.12;
+      background-image:
+        linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px);
+      background-size: 4px 4px;
+      animation: grainMove 1.2s steps(2) infinite;
+      transform: translate3d(0,0,0);
+    }
+
+    .flash {
+      position: fixed;
+      inset: 0;
+      background: white;
+      opacity: 0;
+      pointer-events: none;
+      z-index: 20;
+      transition: opacity 900ms ease;
+    }
+
+    .flash.on {
+      opacity: 1;
+    }
+
+    .terminal-wrap {
+      position: absolute;
+      inset: 0;
+      display: grid;
+      place-items: center;
+      z-index: 5;
+      transition: opacity 900ms ease, transform 900ms ease, filter 900ms ease;
+    }
+
+    .terminal {
+      width: min(92vw, 760px);
+      padding: 22px 24px;
+      border: 1px solid var(--panel-border);
+      border-radius: 18px;
+      background: var(--panel);
+      backdrop-filter: blur(8px);
+      box-shadow: 0 20px 80px rgba(0,0,0,0.5), inset 0 0 40px rgba(255,255,255,0.03);
+      transform: translateY(0);
+    }
+
+    .terminal-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 14px;
+      gap: 16px;
+      color: var(--muted);
+      font-size: 12px;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+    }
+
+    .dots {
+      display: flex;
+      gap: 7px;
+    }
+    .dots span {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: rgba(255,255,255,0.34);
+      box-shadow: 0 0 10px rgba(255,255,255,0.12);
+    }
+
+    .terminal-text {
+      min-height: 220px;
+      white-space: pre-wrap;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+      font-size: clamp(14px, 2vw, 18px);
+      line-height: 1.7;
+      color: rgba(236, 242, 255, 0.95);
+      text-shadow: 0 0 12px rgba(255,255,255,0.08);
+    }
+
+    .caret {
+      display: inline-block;
+      width: 0.65em;
+      height: 1.1em;
+      transform: translateY(0.15em);
+      background: rgba(255,255,255,0.85);
+      animation: blink 0.9s steps(1) infinite;
+      vertical-align: -0.15em;
+      margin-left: 2px;
+    }
+
+    .enter-stage {
+      position: absolute;
+      inset: 0;
+      display: grid;
+      place-items: center;
+      z-index: 8;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 1100ms ease;
+    }
+
+    .enter-stage.ready {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .gate {
+      position: relative;
+      width: min(34vw, 240px);
+      aspect-ratio: 1 / 1;
+      display: grid;
+      place-items: center;
+      border: none;
+      background: transparent;
+      padding: 0;
+      cursor: pointer;
+      filter: drop-shadow(0 0 18px rgba(255,255,255,0.22)) drop-shadow(0 0 42px rgba(255,255,255,0.08));
+      animation: floaty 4.8s ease-in-out infinite;
+      transform-origin: center;
+    }
+
+    .gate:hover {
+      animation: floaty 4.8s ease-in-out infinite, hoverShake 0.36s linear infinite;
+    }
+
+    .center-img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      pointer-events: none;
+      filter: drop-shadow(0 0 20px rgba(255,255,255,0.35));
+    }
+
+    .gate .door::before {
+      content: "";
+      position: absolute;
+      inset: 14% 20% 14% 20%;
+      border-radius: 10px;
+      border: 1px solid rgba(255,255,255,0.16);
+      background: linear-gradient(180deg, rgba(255,255,255,0.08), transparent 70%);
+    }
+
+    .gate .handle {
+      position: absolute;
+      right: 26%;
+      top: 53%;
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: rgba(255,255,255,0.78);
+      box-shadow: 0 0 14px rgba(255,255,255,0.28);
+    }
+
+    .gate .halo {
+      position: absolute;
+      inset: 0;
+      border-radius: 999px;
+      background: radial-gradient(circle, rgba(255,255,255,0.25), transparent 58%);
+      filter: blur(10px);
+      opacity: 0.8;
+    }
+
+    .gate .sigil {
+      position: relative;
+      font-size: clamp(44px, 7vw, 72px);
+      line-height: 1;
+      color: white;
+      text-shadow: 0 0 12px rgba(255,255,255,0.55), 0 0 30px rgba(255,255,255,0.18);
+      pointer-events: none;
+      transform: translateY(-4px);
+    }
+
+    .hint {
+      margin-top: 18px;
+      text-align: center;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-size: 11px;
+      letter-spacing: 0.35em;
+      text-transform: uppercase;
+      color: rgba(255,255,255,0.6);
+      opacity: 0;
+      transform: translateY(8px);
+      transition: opacity 900ms ease 300ms, transform 900ms ease 300ms;
+      user-select: none;
+    }
+
+    .enter-stage.ready .hint {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    .fade-away {
+      opacity: 0;
+      transform: scale(1.01);
+      filter: blur(4px);
+    }
+
+    @keyframes blink {
+      0%, 49% { opacity: 1; }
+      50%, 100% { opacity: 0; }
+    }
+
+    @keyframes floaty {
+      0%, 100% { transform: translateY(0px) translateX(0px) rotate(-0.7deg); }
+      50% { transform: translateY(-12px) translateX(5px) rotate(0.6deg); }
+    }
+
+    @keyframes hoverShake {
+      0% { transform: translateY(-10px) translateX(0px) rotate(0deg); }
+      25% { transform: translateY(-10px) translateX(2px) rotate(0.5deg); }
+      50% { transform: translateY(-10px) translateX(-2px) rotate(-0.6deg); }
+      75% { transform: translateY(-10px) translateX(1px) rotate(0.4deg); }
+      100% { transform: translateY(-10px) translateX(0px) rotate(0deg); }
+    }
+
+    @keyframes drift {
+      0% { transform: scale(1.04) translate3d(0, 0, 0); }
+      100% { transform: scale(1.12) translate3d(-1.8%, -1.2%, 0); }
+    }
+
+    @keyframes grainMove {
+      0% { transform: translate(0, 0); }
+      100% { transform: translate(-2%, 1.5%); }
+    }
+
+    @media (max-width: 700px) {
+      .terminal {
+        padding: 18px 16px;
+        border-radius: 16px;
+      }
+
+      .terminal-text {
+        min-height: 240px;
+      }
+
+      .gate {
+        width: min(52vw, 220px);
+      }
+    }
+  </style>
+</head>
+<body>
+  
+  <script>
+    const BG_GIF_URL = "assets/background.gif";
+    if (BG_GIF_URL.trim()) {
+      document.documentElement.style.setProperty("--bg-gif", `url('${BG_GIF_URL}')`);
+    } else {
+      document.documentElement.style.setProperty(
+        "--bg-gif",
+        "radial-gradient(circle at 20% 20%, rgba(255,255,255,0.10), transparent 18%), radial-gradient(circle at 80% 30%, rgba(120,140,255,0.10), transparent 22%), radial-gradient(circle at 50% 70%, rgba(255,255,255,0.06), transparent 24%), linear-gradient(135deg, #090a0f, #12131b 45%, #07080b)"
+      );
+    }
+  </script>
+
+  <div class="bg" aria-hidden="true"></div>
+  <div class="grain" aria-hidden="true"></div>
+  <div class="flash" id="flash" aria-hidden="true"></div>
+
+  <main>
+    <section class="terminal-wrap" id="terminalWrap">
+      <div class="terminal" role="status" aria-live="polite" aria-label="boot sequence">
+        <div class="terminal-top">
+          <div class="dots" aria-hidden="true">
+            <span></span><span></span><span></span>
+          </div>
+          <div>BOOT / ENTRY / HANDSHAKE</div>
+          <div id="timerLabel">00:00</div>
+        </div>
+        <div class="terminal-text"><span id="typed"></span><span class="caret" id="caret"></span></div>
+      </div>
+    </section>
+
+    <section class="enter-stage" id="enterStage" aria-label="enter the main hub">
+      <button class="gate" id="gate" type="button" aria-label="enter the main hub">
+        <img src="assets/center.png" alt="enter" class="center-img" />
+      </button>
+      <div class="hint">CLICK TO ENTER</div>
+    </section>
+  </main>
+
+  <script>
+    const messages = [
+      "// initializing shrine shell...",
+      "// searching for a signal in the static...",
+      "// loading atmosphere [OK]",
+      "// waking the gate / calibrating drift...",
+      "// one moment.\n// one flash.\n// then the door.",
+      "// ready."
+    ];
+
+    const typedEl = document.getElementById('typed');
+    const caretEl = document.getElementById('caret');
+    const flashEl = document.getElementById('flash');
+    const terminalWrap = document.getElementById('terminalWrap');
+    const enterStage = document.getElementById('enterStage');
+    const gate = document.getElementById('gate');
+    const timerLabel = document.getElementById('timerLabel');
+
+    const fullText = messages.join('\n\n');
+    const speed = 16;
+    let i = 0;
+    let start = Date.now();
+
+    function pad(n) { return String(n).padStart(2, '0'); }
+    function tickTimer() {
+      const elapsed = Math.floor((Date.now() - start) / 1000);
+      timerLabel.textContent = `${pad(Math.floor(elapsed / 60))}:${pad(elapsed % 60)}`;
+    }
+
+    const timer = setInterval(tickTimer, 250);
+    tickTimer();
+
+    function typeLoop() {
+      if (i < fullText.length) {
+        typedEl.textContent += fullText[i];
+        i++;
+        const ch = fullText[i - 1];
+        const delay = ch === '\n' ? 34 : ch === '.' ? 75 : ch === '/' ? 10 : 16;
+        setTimeout(typeLoop, Math.max(8, speed + delay - 16));
+        return;
+      }
+      setTimeout(beginReveal, 550);
+    }
+
+    function beginReveal() {
+      flashEl.classList.add('on');
+      caretEl.style.opacity = '0';
+      setTimeout(() => {
+        terminalWrap.classList.add('fade-away');
+        enterStage.classList.add('ready');
+      }, 180);
+      setTimeout(() => {
+        flashEl.classList.remove('on');
+      }, 700);
+      setTimeout(() => {
+        terminalWrap.style.display = 'none';
+      }, 1100);
+      clearInterval(timer);
+    }
+
+    gate.addEventListener('click', () => {
+      gate.style.transform = 'scale(0.95)';
+      gate.style.filter = 'drop-shadow(0 0 24px rgba(255,255,255,0.35)) drop-shadow(0 0 54px rgba(255,255,255,0.12))';
+      flashEl.classList.add('on');
+      setTimeout(() => {
+        window.location.href = 'hub.html';
+      }, 420);
+    });
+
+    const maxOffset = 10;
+    document.addEventListener('mousemove', (e) => {
+      const rect = gate.getBoundingClientRect();
+      const cx = rect.left + rect.width / 2;
+      const cy = rect.top + rect.height / 2;
+      const dx = (e.clientX - cx) / window.innerWidth;
+      const dy = (e.clientY - cy) / window.innerHeight;
+      const tx = Math.max(-maxOffset, Math.min(maxOffset, dx * 34));
+      const ty = Math.max(-maxOffset, Math.min(maxOffset, dy * 34));
+      gate.style.setProperty('--mx', tx + 'px');
+      gate.style.setProperty('--my', ty + 'px');
+      gate.style.transform = `translate(${tx * 0.18}px, ${ty * 0.18}px) scale(1)`;
+    });
+
+    gate.addEventListener('mouseenter', () => {
+      gate.style.transition = 'transform 60ms linear';
+    });
+
+    gate.addEventListener('mouseleave', () => {
+      gate.style.transition = 'transform 300ms ease';
+      gate.style.transform = 'translate(0,0)';
+    });
+
+    typeLoop();
+  </script>
+</body>
+</html>
