@@ -303,7 +303,7 @@
 </head>
 <body>
   <script>
-    const BG_GIF_URL = "background.gif";
+    const BG_GIF_URL = "assets/background.gif";
     if (BG_GIF_URL.trim()) {
       document.documentElement.style.setProperty("--bg-gif", `url('${BG_GIF_URL}')`);
     } else {
@@ -334,7 +334,7 @@
 
     <section class="enter-stage" id="enterStage" aria-label="enter the main hub">
       <button class="gate" id="gate" type="button" aria-label="enter the main hub">
-        <img src="gate.png" alt="enter" class="center-img" />
+        <img src="assets/gate.png" alt="enter" class="gate-img" />
       </button>
       <div class="hint">CLICK TO ENTER</div>
     </section>
@@ -346,9 +346,10 @@
       "// searching for a signal in the static...",
       "// loading atmosphere [OK]",
       "// waking the gate / calibrating drift...",
-      "// one moment.\n// one flash.\n// then the door.",
+      "// one moment.",
+      "// one flash.",
+      "// then the door.",
       "// ready."
-    ];
 
     const typedEl = document.getElementById('typed');
     const caretEl = document.getElementById('caret');
@@ -358,8 +359,9 @@
     const gate = document.getElementById('gate');
     const timerLabel = document.getElementById('timerLabel');
 
-    const fullText = messages.join('\n\n');
-    const speed = 6;
+    const fullText = messages.join('
+
+');
     let i = 0;
     let start = Date.now();
 
@@ -373,31 +375,50 @@
     tickTimer();
 
     function typeLoop() {
-      const glitchChars = ['#','@','%','&','/','\\','░','▒','▓'];
-
       if (i < fullText.length) {
         const burstSize = Math.floor(Math.random() * 4) + 2;
 
         let chunk = '';
         for (let b = 0; b < burstSize && i < fullText.length; b++, i++) {
-          let ch = fullText[i];
-
-          if (Math.random() < 0.04 && ch !== '\n' && ch !== ' ') {
-            chunk += glitchChars[Math.floor(Math.random() * glitchChars.length)];
-          } else {
-            chunk += ch;
-          }
+          chunk += fullText[i];
         }
 
         typedEl.textContent += chunk;
 
-        const delay = 8 + Math.random() * 22;
+        const delay = 10 + Math.random() * 20;
         setTimeout(typeLoop, delay);
         return;
       }
 
-      setTimeout(beginReveal, 350);
+      setTimeout(beginReveal, 400);
     }
+
+    function beginReveal() {
+      flashEl.classList.add('on');
+      caretEl.style.opacity = '0';
+
+      setTimeout(() => {
+        terminalWrap.classList.add('fade-away');
+        enterStage.classList.add('ready');
+      }, 200);
+
+      setTimeout(() => {
+        flashEl.classList.remove('on');
+      }, 700);
+
+      setTimeout(() => {
+        terminalWrap.style.display = 'none';
+      }, 1100);
+
+      clearInterval(timer);
+    }
+
+    gate.addEventListener('click', () => {
+      flashEl.classList.add('on');
+      setTimeout(() => {
+        window.location.href = 'hub.html';
+      }, 400);
+    });
 
     typeLoop();
   </script>
